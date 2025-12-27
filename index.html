@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Envelope Letter</title>
+
+    <style>
+        /* =====================
+   共通・画面全体
+===================== */
+        :root {
+            --bg: #f5f5f5;
+            --env: #e0e0e0;
+            --env-border: #bbb;
+            --letter: #ffffff;
+            --text: #333;
+        }
+
+        body {
+            margin: 0;
+            width: 100vw;
+            height: 100vh;
+            background: var(--bg);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            font-family: "Hiragino Kaku Gothic ProN", sans-serif;
+            perspective: 1200px;
+        }
+
+        /* =====================
+   テーマ
+===================== */
+        body.theme-simple {
+            --bg: #f4f4f4;
+            --env: #e1e1e1;
+            --env-border: #bcbcbc;
+            --flap: #cfcfcf;
+            --letter: #ffffff;
+            --text: #333333;
+        }
+
+        body.theme-cute {
+            --bg: #fff3f7;
+            --env: #ffc1cc;
+            --env-border: #ff8fb0;
+            --flap: #ff6fae;
+            --letter: #ffffff;
+            --text: #70324a;
+        }
+
+        body.theme-classic {
+            --bg: #f3f0ea;
+            --env: #d8c9a8;
+            --env-border: #a3916e;
+            --flap: #c6b68a;
+            --letter: #fbf8f3;
+            --text: #4a3f2c;
+        }
+
+        body.theme-christmas {
+            --bg: #eef5ff;
+            --env: #ff5a5a;
+            --env-border: #b80000;
+            --flap: #0f7a3a;
+            --letter: #fffafa;
+            --text: #5a0000;
+        }
+
+        body.theme-night {
+            --bg: #181826;
+            --env: #202846;
+            --env-border: #0f3460;
+            --flap: #2a3a7a;
+            --letter: #24243a;
+            --text: #eaeaea;
+        }
+
+        body.theme-modern {
+            --bg: #f8fafc;
+            --env: #e5e7eb;
+            --env-border: #9ca3af;
+            --flap: #6366f1;
+            --letter: #ffffff;
+            --text: #111827;
+        }
+
+        body.theme-modern-dark {
+            --bg: #0f172a;
+            --env: #1e293b;
+            --env-border: #334155;
+            --flap: #38bdf8;
+            --letter: #020617;
+            --text: #e5e7eb;
+        }
+
+        /* =====================
+   封筒ラッパー
+===================== */
+        .envelope-wrapper {
+            position: absolute;
+            left: 50%;
+            top: 100%;
+            width: min(98vw, 600px);
+            height: min(70vw, 400px);
+            max-width: 98vw;
+            max-height: 80vh;
+            aspect-ratio: 3 / 2;
+            transform: translate(-50%, 0) translateY(0);
+            transform-style: preserve-3d;
+            transition: top 1s cubic-bezier(0.4, 0.7, 0.2, 1), transform 1s cubic-bezier(0.4, 0.7, 0.2, 1);
+            z-index: 10;
+        }
+
+        body.loaded .envelope-wrapper {
+            top: 50%;
+            transform: translate(-50%, -50%) translateY(0);
+        }
+
+        /* タップ表示中央配置 */
+        .tap-text {
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 18px;
+            color: #333;
+            background: rgba(255, 255, 255, 0.85);
+            padding: 12px 32px;
+            border-radius: 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            z-index: 100;
+            animation: blink 1.5s infinite;
+            pointer-events: none;
+            user-select: none;
+        }
+
+        @keyframes blink {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.3;
+            }
+        }
+
+        /* =====================
+   封筒本体
+===================== */
+        .envelope {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background: transparent;
+            box-sizing: border-box;
+            overflow: visible;
+            transform-style: preserve-3d;
+        }
+
+        /* フラップ（上辺台形） */
+        .flap {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 50%;
+            background: var(--flap);
+            border: 3px solid var(--env-border);
+            border-bottom: none;
+            box-sizing: border-box;
+            clip-path: polygon(50% 70%, 0 0, 100% 0);
+            transform-origin: top center;
+            transform: rotateX(0deg);
+            transition: transform 1s ease;
+            z-index: 5;
+            backface-visibility: visible;
+        }
+
+        /* 開封：奥に回転 */
+        .flap.open {
+            transform: rotateX(-180deg);
+        }
+
+        /* 封筒本体（台形＋下辺直線） */
+        .envelope-body {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 80%;
+            background: var(--env);
+            border: 3px solid var(--env-border);
+            border-top: none;
+            box-sizing: border-box;
+            z-index: 2;
+            transition: transform 1s cubic-bezier(0.4, 0.7, 0.2, 1), opacity 0.6s;
+        }
+
+        /* 封筒背面（下辺台形） */
+        .envelope-back {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 80%;
+            background: var(--flap);
+            border: 3px solid var(--env-border);
+            border-top: none;
+            box-sizing: border-box;
+            z-index: 1;
+        }
+
+        /* 封筒本体とフラップが下にスライドアウト */
+        .envelope.slide-out .envelope-body,
+        .envelope.slide-out .flap,
+        .envelope.slide-out .envelope-back {
+            transform: translateY(120%);
+            opacity: 0;
+        }
+
+        /* =====================
+   手紙
+===================== */
+        .letter {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 86%;
+            max-height: 70vh;
+
+            background: var(--letter);
+            color: var(--text);
+            padding: 20px;
+            box-sizing: border-box;
+            border-radius: 6px;
+            white-space: pre-wrap;
+            overflow-y: auto;
+            z-index: 1;
+
+            opacity: 0;
+            visibility: hidden;
+            transform: translate(-50%, -50%) translateY(-200px);
+            transition:
+                transform 0.8s cubic-bezier(0.4, 0.7, 0.2, 1),
+                opacity 0.4s;
+        }
+
+        .envelope.show-letter~.letter {
+            opacity: 1;
+            visibility: visible;
+            transform: translate(-50%, -50%) translateY(-250px);
+        }
+
+        .envelope.show-letter.slide-center~.letter {
+            transform: translate(-50%, -50%);
+        }
+
+        /* スマホ向け：手紙の文字を小さく */
+        @media (max-width: 600px) {
+            .letter {
+                font-size: 14px;
+                padding: 12px;
+            }
+
+            .tap-text {
+                font-size: 16px;
+                padding: 10px 24px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="envelope-wrapper">
+        <div class="envelope" id="envelope">
+            <div class="flap"></div>
+            <div class="envelope-body"></div>
+            <div class="envelope-back"></div>
+        </div>
+        <div class="letter" id="letter"></div>
+    </div>
+    <div class="tap-text" id="tapText">画面をタップ</div>
+
+    <script>
+        /* =====================
+           クエリ処理
+        ===================== */
+        const params = new URLSearchParams(location.search);
+        const theme = params.get("theme") || "simple";
+        const letterText =
+            params.get("letter") ||
+            "封筒が開くまで、この内容は見えません。\n\n開封後に表示される手紙です。";
+
+        document.body.classList.add("theme-" + theme);
+        document.getElementById("letter").innerHTML = letterText;
+
+        // ページロード時に封筒を下から中央へ
+        window.addEventListener("DOMContentLoaded", () => {
+            setTimeout(() => {
+                document.body.classList.add("loaded");
+            }, 100); // 少し遅延してアニメーション
+        });
+
+        /* =====================
+           アニメーション制御
+        ===================== */
+        const envelope = document.getElementById("envelope");
+        const envelopeBack = document.querySelector(".envelope-back");
+        const flap = document.querySelector(".flap");
+        const tapText = document.getElementById("tapText");
+        let opened = false;
+
+        // タップで開封
+        document.body.addEventListener("click", () => {
+            if (opened) return;
+            opened = true;
+
+            // タップテキストを消す
+            if (tapText) tapText.style.display = "none";
+
+            envelope.classList.add("open");
+            flap.classList.add("open");
+
+            // フラップ回転完了後に手紙表示
+            setTimeout(() => {
+                // 封筒本体とフラップを下にスライドアウト
+
+                envelope.classList.add("show-letter");
+
+                setTimeout(() => {
+                    envelope.classList.add("slide-center");
+                }, 2000);
+
+                setTimeout(() => {
+                    envelope.classList.add("slide-out");
+                }, 1200); // 手紙が出てきた後に封筒をスライドアウト
+            }, 900);
+        });
+    </script>
+</body>
+
+</html>
